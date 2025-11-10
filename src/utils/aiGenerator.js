@@ -1,39 +1,24 @@
-const HF_API = "https://api-inference.huggingface.co/models"
-const TEXT_MODEL = "runwayml/stable-diffusion-v1-5"
-const IMG_MODEL = "lllyasviel/control_v1p_sd15_brightness"
+const HF_API = "https://router.huggingface.co/hf-inference"; // API جدید
+const MODEL = "runwayml/stable-diffusion-v1-5"; // یا stabilityai/stable-diffusion-2-1 برای سرعت بیشتر
 
 export async function textToImage(prompt) {
-  return await callHF(TEXT_MODEL, { inputs: prompt })
-}
-
-export async function imageToModifiedImage(file) {
-  const base64 = await fileToBase64(file)
-  return await callHF(IMG_MODEL, {
-    inputs: base64,
-    parameters: { prompt: "subtle changes, keep style" }
-  })
-}
-
-async function callHF(model, payload) {
-  const res = await fetch(`${HF_API}/${model}`, {
+  const response = await fetch(`${HF_API}/models/${MODEL}`, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${import.meta.env.VITE_HF_TOKEN}`,
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
-    body: JSON.stringify(payload)
-  })
+    body: JSON.stringify({ inputs: prompt }),
+  });
 
-  if (!res.ok) throw new Error("AI failed")
-  const blob = await res.blob()
-  return URL.createObjectURL(blob)
+  if (!response.ok) {
+    const err = await response.text();
+    console.error("HF Error:", err); // دیباگ
+    throw new Error("AI failed: " + err.substring(0, 100));
+  }
+
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
 }
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
+// بقیه کد مثل قبل (imageToModifiedImage)
