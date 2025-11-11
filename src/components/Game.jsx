@@ -21,7 +21,7 @@ export default function Game({ onEnd }) {
 
   useEffect(() => {
     if (timer === 0) onEnd(score)
-  }, [timer])
+  }, [timer, score, onEnd])
 
   const startGame = async (input) => {
     setLoading(true)
@@ -43,7 +43,19 @@ export default function Game({ onEnd }) {
       setTimer(60)
       setCombo(1)
     } catch (err) {
-      alert("AI is busy. Retrying in 10s...")
+      console.error("Game start error:", err);
+      const errorMessage = err.message || "Unknown error";
+      
+      // اگر مدل در حال لود شدن است، پیام بهتری نشان بده
+      if (errorMessage.includes("loading") || errorMessage.includes("wait")) {
+        alert(`⏳ ${errorMessage}\n\nRetrying in 10s...`);
+      } else if (errorMessage.includes("VITE_HF_TOKEN")) {
+        alert("❌ Error: Hugging Face token is not set!\n\nPlease add VITE_HF_TOKEN to your .env file.");
+        return; // اگر توکن نیست، retry نکن
+      } else {
+        alert(`⚠️ AI Error: ${errorMessage}\n\nRetrying in 10s...`);
+      }
+      
       setTimeout(() => startGame(input), 10000)
     } finally {
       setLoading(false)
@@ -67,6 +79,10 @@ export default function Game({ onEnd }) {
 
   if (loading) return <div className="text-center text-xl">Generating AI Puzzle...</div>
 
+  if (!images.img1 || !images.img2) {
+    return <div className="text-center text-xl">Loading images...</div>
+  }
+
   return (
     <div className="text-center space-y-6">
       <div className="text-2xl font-bold">
@@ -75,11 +91,13 @@ export default function Game({ onEnd }) {
       <div className="flex flex-col md:flex-row gap-6 justify-center">
         <img
           src={images.img1}
+          alt="Original image"
           onClick={(e) => handleClick('left', e)}
           className="w-full max-w-md rounded-xl shadow-2xl cursor-crosshair border-4 border-purple-300"
         />
         <img
           src={images.img2}
+          alt="Modified image"
           onClick={(e) => handleClick('right', e)}
           className="w-full max-w-md rounded-xl shadow-2xl cursor-crosshair border-4 border-blue-300"
         />
