@@ -1,6 +1,7 @@
 {
     "name": "diffmaster-ai",
     "version": "1.0.0",
+    "type": "module",
     "private": true,
     "scripts": {
         "dev": "vite",
@@ -9,6 +10,7 @@
     },
     "dependencies": {
         "@supabase/supabase-js": "^2.80.0",
+        "express": "^5.1.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0"
     },

@@ -8,6 +8,8 @@ export default function Game({ onEnd }) {
   const [timer, setTimer] = useState(60)
   const [combo, setCombo] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [generationStatus, setGenerationStatus] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     const input = window.gameInput || { text: "a dog playing in a sunny park" }
@@ -25,18 +27,25 @@ export default function Game({ onEnd }) {
 
   const startGame = async (input) => {
     setLoading(true)
+    setGenerationStatus('🎨 شروع تولید تصویر...')
+    setRetryCount(0)
+
     try {
       let img1, img2
 
       if (input.image) {
         img1 = URL.createObjectURL(input.image)
+        setGenerationStatus('🔄 تولید تصویر اصلاح شده...')
         img2 = await imageToModifiedImage(input.image)
       } else {
         const base = input.text
+        setGenerationStatus('🎯 تولید تصویر اصلی...')
         img1 = await textToImage(base)
+        setGenerationStatus('🎯 تولید تصویر با تفاوت‌های ظریف...')
         img2 = await textToImage(`${base}, with 5 subtle differences: move object, change color, add shadow, resize, remove detail`)
       }
 
+      setGenerationStatus('✅ تصاویر آماده شدند!')
       setImages({ img1, img2 })
       setFound([])
       setScore(0)
@@ -45,18 +54,25 @@ export default function Game({ onEnd }) {
     } catch (err) {
       console.error("Game start error:", err);
       const errorMessage = err.message || "Unknown error";
-      
+
+      setRetryCount(prev => prev + 1)
+
       // اگر مدل در حال لود شدن است، پیام بهتری نشان بده
-      if (errorMessage.includes("loading") || errorMessage.includes("wait")) {
-        alert(`⏳ ${errorMessage}\n\nRetrying in 10s...`);
+      if (errorMessage.includes("Python not found")) {
+        setGenerationStatus("❌ Python نصب نیست - لطفاً Python را نصب کنید");
+        alert("❌ Python is not installed!\n\nPlease install Python from https://python.org and restart the application.");
+        return;
+      } else if (errorMessage.includes("loading") || errorMessage.includes("wait")) {
+        setGenerationStatus(`⏳ ${errorMessage} (تلاش ${retryCount + 1})`);
       } else if (errorMessage.includes("VITE_HF_TOKEN")) {
+        setGenerationStatus("❌ خطا: توکن HuggingFace تنظیم نشده!");
         alert("❌ Error: Hugging Face token is not set!\n\nPlease add VITE_HF_TOKEN to your .env file.");
         return; // اگر توکن نیست، retry نکن
       } else {
-        alert(`⚠️ AI Error: ${errorMessage}\n\nRetrying in 10s...`);
+        setGenerationStatus(`⚠️ خطای AI: ${errorMessage} (تلاش ${retryCount + 1})`);
       }
-      
-      setTimeout(() => startGame(input), 10000)
+
+      setTimeout(() => startGame(input), 15000) // افزایش زمان به 15 ثانیه
     } finally {
       setLoading(false)
     }
@@ -77,7 +93,20 @@ export default function Game({ onEnd }) {
     }
   }
 
-  if (loading) return <div className="text-center text-xl">Generating AI Puzzle...</div>
+  if (loading) return (
+    <div className="text-center text-xl space-y-4">
+      <div>🎨 تولید پازل هوش مصنوعی...</div>
+      <div className="text-lg text-blue-400">{generationStatus}</div>
+      <div className="flex justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      </div>
+      {retryCount > 0 && (
+        <div className="text-sm text-orange-400">
+          تلاش شماره {retryCount} - لطفاً صبر کنید...
+        </div>
+      )}
+    </div>
+  )
 
   if (!images.img1 || !images.img2) {
     return <div className="text-center text-xl">Loading images...</div>
